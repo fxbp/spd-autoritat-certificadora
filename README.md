@@ -1,4 +1,4 @@
----
+<!-- ---
 title: "SPD - Autoritat Certificadora"
 author: [Francesc Xavier Bullich Parra, GEINF (UDG-EPS)]
 date: 2 de Gener de 2020
@@ -9,7 +9,7 @@ titlepage: true
 
 ...
 
-\newpage
+\newpage -->
 
 
 # Objectiu
@@ -36,7 +36,7 @@ El PKI es divideix en diversos subsistemes:
 - Autoritat de custodia: Emmagatzema de forma segura les claus de xifrat que utilitza l'autoritat certificadora.
 
 
-![Esquema PKI - Wikipedia](images/pki-wiki.png =100x)
+![Esquema PKI - Wikipedia](images/pki-wiki.png){:height="50px" width="50px"}
 
 # Referències
 
