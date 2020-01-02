@@ -36,7 +36,7 @@ El PKI es divideix en diversos subsistemes:
 - Autoritat de custodia: Emmagatzema de forma segura les claus de xifrat que utilitza l'autoritat certificadora.
 
 
-![Esquema PKI - Wikipedia](images/pki-wiki.png)
+![Esquema PKI - Wikipedia](images/pki-wiki.png =100x)
 
 # Referències
 
