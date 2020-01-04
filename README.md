@@ -524,23 +524,22 @@ Simulem una connexió entre els dos serveis amb un subdirectori c'onnexio' a cad
 
 ```
 exemple/
-├── api1
-│   ├── certs
-│   │   ├── api1.cert.pem
-│   │   └── ca-bdd-chain.cert.pem
-│   ├── clau
-│   │   └── api1.key.pem
-│   └── connexio
-│       └── bdd1.cert.pem
-└── bdd1
-    ├── certs
-    │   ├── bdd1.cert.pem
-    │   └── ca-api-chain.cert.pem
-    ├── clau
-    │   └── bdd1.key.pem
-    └── connexio
-        └── api1.cert.pem
-
+    api1/
+        certs/
+            api1.cert.pem
+            ca-bdd-chain.cert.pem
+        clau/
+            api1.key.pem
+        connexio/
+            bdd1.cert.pem
+    bdd1/
+        certs/
+            bdd1.cert.pem
+            ca-api-chain.cert.pem
+        clau/
+            bdd1.key.pem
+        connexio/
+            api1.cert.pem
 ```
 
 Ara només ens queda verificar que el certificat és de confiança mitjançant les cadenes de confiança que hem instal·lat a cada aplicació. Obviament només comprovant les signatures no en fem prou peró serveix per ilustrar com s'hauria de fer.
