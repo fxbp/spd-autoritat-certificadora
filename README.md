@@ -445,6 +445,118 @@ Les 2 opcions son vàlides. Si decidim 'instal·lar' el certificat de l'autorita
 
 ### Confiança entre serveis
 
+Seguint l'estructura de la figura 4:
+
+Ara tenim dues autoritats intermitges. Cada una servirà certificats per els seu conjunt de serveis. L'autoritat API servirà certificats les diferents aplicacions que tinguem a la nostre xarxa. L'autoritat BDD servirà els certificats als servidors de bases de dades que tinguem. 
+
+Que s'ha de fer:
+
+En els servidors/aplicacions que siguin del conjunt de les API (que tinguin certificats signats per API CA) s'instal·larà el certificat de la BDD CA (amb el root o amb la cadena de confiança).
+
+D'altra banda en els servidors que siguin del conjunt de BDD (que tinguin certificats signats per BDD CA) s'instal·larà el certificat de API CA.
+
+D'aquesta manera, les aplicacions/servidors API només confiaran en BDD CA, es a dir que només acceptaran certificats que s'hagin estat signats per BDD CA. Amb les aplicacions de BDD pasarà el mateix pero amb la signatura de API CA.
+
+Així doncs quan s'estableixi una connexió entre un aplicació API i una aplicació BDD, totes dues aplicacions veuren que el certificat de l'altre aplicació és valid i de confiança.
+
+#### Exemple de confiança
+
+En aquest apartat simularé 2 aplicacions, una per cada CA intermitja, amb directoris diferents.
+
+Es generarà un certificat per a cada aplicació a partir de les CA intermitges. Posteriorment "s'instal·larà a cada aplicació el certificat de l'autoritat de l'altre part i es verificaran els certificats.
+
+Com abans s'ha de generar un parell de claus, privada i pública, per a cada aplicació.
+
+Al directori __exemple__ hi haurà els direcoris de les aplicacions api1 i bdd1. Cada aplicació tindrà la seva clau privada al subdirectori claus, i els certificats que necessiti al subdirectoris certs.
+
+```
+openssl genrsa -out api1/clau/api1.key.pem 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+.................................+++++
+...........................+++++
+e is 65537 (0x010001)
+
+chmod 400 api1/clau/api1.key.pem 
+
+openssl genrsa -out bdd1/clau/bdd1.key.pem 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+....+++++
+.................+++++
+e is 65537 (0x010001)
+
+chmod 400  bdd1/clau/bdd1.key.pem
+```
+
+Ara per a cada un es creen els CSR amb la Autoritat corresponent i es signen. Ho mostro només per api1, per bdd1 és el mateix amb la seva autoritat.
+
+```
+openssl req -config ../autoritat/API/openssl.cnf -key api1/clau/api1.key.pem -new -sha256 -out ../autoritat/API/csr/api1.csr.pem
+
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:ES	
+State or Province Name [England]:Catalunya
+Locality Name []:Girona
+Organization Name [Alice Ltd]:SPD-Api1
+Organizational Unit Name []:
+Common Name []:SPD Treball api1
+Email Address []:
+
+openssl ca -config ../autoritat/API/openssl.cnf -extensions server_cert -days 375 -notext -md sha256 -in ../autoritat/API/csr/api1.csr.pem -out ../autoritat/API/certs/api1.cert.pem
+
+# La CA (RA) ens hauria de retornar el certificat, Faig un cp per simular-ho
+cp ../autoritat/API/certs/api1.cert.pem api1/certs/
+```
+
+Un cop tenim els certificats de api1 i bdd1 necesitem que les aplicacions confiin en "l'altre" autoritat certificadora. Al directori certs de api1 hi posarem la cadena de confiança de BDD i al directori 'certs' de bdd1 hi posarem la cadena de confiança de API.
+
+```
+cp ../autoritat/API/certs/ca-api-chain.cert.pem bdd1/certs/
+cp ../autoritat/BDD/certs/ca-bdd-chain.cert.pem api1/certs/
+```
+
+Simulem una connexió entre els dos serveis amb un subdirectori c'onnexio' a cada una de les aplicacions. En aquest directori "s'hauran guardat els certificats intercanviats".
+
+```
+exemple/
+├── api1
+│   ├── certs
+│   │   ├── api1.cert.pem
+│   │   └── ca-bdd-chain.cert.pem
+│   ├── clau
+│   │   └── api1.key.pem
+│   └── connexio
+│       └── bdd1.cert.pem
+└── bdd1
+    ├── certs
+    │   ├── bdd1.cert.pem
+    │   └── ca-api-chain.cert.pem
+    ├── clau
+    │   └── bdd1.key.pem
+    └── connexio
+        └── api1.cert.pem
+
+```
+
+Ara només ens queda verificar que el certificat és de confiança mitjançant les cadenes de confiança que hem instal·lat a cada aplicació. Obviament només comprovant les signatures no en fem prou peró serveix per ilustrar com s'hauria de fer.
+
+```
+openssl verify -CAfile exemple/api1/certs/ca-bdd-chain.cert.pem exemple/api1/connexio/bdd1.cert.pem 
+exemple/api1/connexio/bdd1.cert.pem: OK
+
+openssl verify -CAfile exemple/bdd1/certs/ca-api-chain.cert.pem exemple/bdd1/connexio/api1.cert.pem 
+exemple/bdd1/connexio/api1.cert.pem: OK
+```
+
+
+## Revocació de certificats
+
+
 
 
 \newpage
