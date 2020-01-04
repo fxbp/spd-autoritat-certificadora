@@ -81,7 +81,170 @@ Com ja he explicat, per tenir una CA el primer de tot es crear el certificat arr
 
 Per seguretat aquest certificat no l'hem d'utilitzar per res més per tant les claus haurien d'estar en un lloc separat de la resta i protegit. En aquest cas però com que és un cas acadèmic, tota la informació relacionada amb el certificat arrel estara en el subdirectori __autoritat/arrel__.
 
+
+### Directoris
+
+Dins de __arrel__ es creen els següents directoris per tal d'ordenar tots els fitxers que s'utilizaran.
+
+- private: Aquí hi aniran les claus privades. Com he comentat abans aquestes claus no s'haurien de guardar amb la resta d'informació sino que haurien d'estar separats i protegits.
+- certs: Aquí si guardaràn tots els certificats que signi el certificat arrel
+- crl: Quan es revoqui algun certificat signat per l'arrel es guardarà en aquest directori.
+
+Per posar una mica de protecció el directori private li treurem la resta de permisos
+
+```
+mkdir private certs crl
+chmod 700 private
+```
+
+### Fitxers base de dades
+
+Utilitzarem fitxers a mode de base de dades.
+
+- index.txt: Aquest fitxer contindrà tots els registres de certificats que es creein. Tindran informació del numero de serie i l'estat (valid, revocat o caducat)
+- serial: Aquest fitxer conté un valor en format hexadecimal que utilitzarà openssl per generar els certificats. Cada certificat tindrà un numero de serie. En aquest fitxer s'hi guarda el valor 'autonumeric', per a cada nou certificat s'incrementa el valor.
+
+```
+touch index.txt
+echo 1000 > serial
+```
+
+### Fitxer de configuració OpenSSL
+
+Al directori __autoritat__ hi ha alguns fitxers plantilla de configuració. Aquests fitxers s'ulitlizaran en les comandes de openssl i indiquen les opcions que ha d'utilitzar openssl per crear els certificats, com per exemple: la ruta dels directoris i fitxers que ha d'utilitzar, les politiques de validació de dades o les dades per defecte per els certificats. 
+
+Si es mira [2] explica per sobre que significa cada apartat.
+
+__Politiques__
+
+Dins del fitxer de configuració podem definir diverses politiques. Aquestes politiques faran un seguit de comprovacions abans de signar un certificat, si no compleixen, no el signaran.
+
+Per el certificat arrel s'utilitzara la politica estricte:
+
+```
+[ policy_strict ]
+# The root CA should only sign intermediate certificates that match.
+# See the POLICY FORMAT section of `man ca`.
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+```
+
+Aquestes son les dades 'Distinguished Name' necessaries per poder crear el certificat. Tenim 3 nivells:
+
+- Match: Si es posa match en un atribut, aquest haurà de coincidir amb el que tingui el certificat arrel (o certificat amb el que es singi). Per exemple si a countryName del certificat arrel tenim 'ES', només s'acceparan peticions que tinguin 'ES'.
+
+- supplied: Aquest camp pot tenir qualsevol valor però es requerit. Si la petició no el porta no es podrà signar el certificat.
+
+- optional: Aquest camp es pot informar o no. No interfereix en la creació del certificat.
+
+
+### Creació de les claus
+
+Fem una copia de la plantilla al directori on tinguem l'arrel de la CA, en el meu cas __autoritat/arrel__, i modifiquem les dades convenients.
+
+Un cop ja tenim tots els fitxers necessaris podem crear les claus privada i publica. 
+
+Per l'arrel i els certificats intermedis s'utilitzaran claus de 4096 bits i una contrasenya aes265 que ens demanarà cada cop que volguem signar un certificat nou. De totes maneres podem singar certificats amb claus menors per tant no hi ha problema.
+
+```
+openssl genrsa -aes256 -out private/ca.key.pem 4096
+chmod 400 private/ca.key.pem
+```
+```
+Generating RSA private key, 4096 bit long modulus (2 primes)
+...........................................................++++
+........................++++
+e is 65537 (0x010001)
+Enter pass phrase for private/ca.key.pem:
+Verifying - Enter pass phrase for private/ca.key.pem:
+
+```
+
+Si es vol utilitzar aquesta clau, el password es 'patates'
+
+Finalment només s'ha de crear el certificat a partir de la clau pública. Quan s'utilitza el parametre 'req' de Openssl es important indicar el fitxer de configuració -config, sino s'utilitzara el que te per defecte.
+
+```
+openssl req -config openssl.cnf -key private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem
+
+Enter pass phrase for private/ca.key.pem:
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:ES
+State or Province Name [England]:Catalunya
+Locality Name []:Girona
+Organization Name [Alice Ltd]:SPD-UDG
+Organizational Unit Name []:SPD
+Common Name []:SPD Treball CA Arrel
+Email Address []:
+
+chmod 444 certs/ca.cert.pem
+```
+
+Aquesta comanda ens demanarà la contrasenya de la clau privada i despres el distinguished name en el format del __[rfc1779](https://tools.ietf.org/html/rfc1779)__.
+
+En aquest cas s'utilitza sha256 com a algoritme de hash per signar els nous certificats pero podem canviar-lo si volem, això dependrà de per quin entorn el volem utilitzar i quins algoritmes son acceptats en els nostres dispositius i aplicacions.
+
+Com es pot veure també s'especifica el format del certificat __x509__. Aquest format es estandart internaciona per PKI. Podem veure l'especifiació d'aquest format al __[rfc5280](https://tools.ietf.org/html/rfc5280)__, en concret la versió 3 que és la que utilitzem.
+
+
+Per comprovar que el certificat es correcte i veuren el contingut:
+
+```
+openssl x509 -noout -text -in certs/ca.cert.pem 
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            3b:c8:c8:9a:bd:3e:c4:57:cc:94:00:06:5d:0e:c7:3d:0b:e3:93:37
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = ES, ST = Catalunya, L = Girona, O = SPD-UDG, OU = SPD, CN = SPD Treball CA Arrel
+        Validity
+            Not Before: Jan  4 12:05:23 2020 GMT
+            Not After : Dec 30 12:05:23 2039 GMT
+        Subject: C = ES, ST = Catalunya, L = Girona, O = SPD-UDG, OU = SPD, CN = SPD Treball CA Arrel
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (4096 bit)
+                Modulus:
+                    00:d3:18:a5:a7:61:de:4c:47:e4:d3:6d:d2:1b:c5:
+                    c7:4a:f9:ed:f8:e8:5a:95:17:28:75:bc:4d:d9:87:
+                    4f:eb....
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                3B:AE:80:4A:E4:39:9F:3A:B1:02:10:78:5F:56:A0:8E:1D:F9:05:60
+            X509v3 Authority Key Identifier: 
+                keyid:3B:AE:80:4A:E4:39:9F:3A:B1:02:10:78:5F:56:A0:8E:1D:F9:05:60
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+    Signature Algorithm: sha256WithRSAEncryption
+         bc:6d:71:a1:a0:6a:3f:9e:33:fb:e8:7f:f9:6d:2c:e7:59:0d:
+         50:69:49:81:f9:14:fc:8d:e5:55:ca:15:89:39:43:0c:05:f2:
+         cd:....
+
+```
+Si ens fixem, el Issuer (El que signa el certificat) i el Subject(Informació del certificat 'client') són el matiex. Com s'ha explicat abans, els certificats arrel son autosignats i contenen la mateixa informació en el Singant i el Client.
+
+Amb aquests passos ja tindriem l'autoritat certificadora arrel. Hauriem de crear autoritats intermedies per tal que els clients no facin peticions directament a l'autoritat arrel. Haurem de crear certificats nous, signats per l'autoritat arrel que ja tenim i crear les cadenes de confiança.
+
+
+## Autoritats intermedies
+
 \newpage
+
 
 # Referències
 
