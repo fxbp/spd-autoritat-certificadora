@@ -243,8 +243,211 @@ Amb aquests passos ja tindriem l'autoritat certificadora arrel. Hauriem de crear
 
 ## Autoritats intermedies
 
-\newpage
+En aquest cas seguirem aquest esquema de [3] per crear diverses autoritats intermedies i veure com poden confiar entre elles mitjançant els certificats.
 
+![Esquema Confiança - CloudFlare](images/service-to-service-cloudflare.png){height="350px" width="350px"}
+
+
+### Estructura de Directoris
+
+Utilitzarem per a cada autoritat un esquema similar al de l'arrel. En aquest cas peró s'afagira el directori csr on s'hi guardaran els fitxers de petició per crear certificats dels 'clients'.
+
+Dins de la carpeta __autoritat__ hi ha les carpetes API i BDD on es crearan les dues autoritats intermedies.
+
+```
+# S'ha de fer el matiex pel directori API i per BDD
+
+mkdir certs crl csr private
+chmod 700 private
+```
+
+### Fitxers
+
+Com abans també tindrem els fitxers index.txt i serial per la gestió dels certificats que signin les autoritats intermitges. A més crearem un numero de serie per els certificats revocats (en l'autoritat arrel no s'ha fet, pero si haguessim de revocar algun certificat intermig també caldria).
+
+```
+# Aquesta part també s'ha de fer als directoris API i BDD
+touch index.txt
+echo 1000 > serial
+echo 1000 > crlnumber
+```
+
+També caldrà un fitxer de configuració per les autoritats intermedies. Al directori __autoritat__ hi ha una plantilla per els fitxers intermedis. Només s'ha de copiar i canviar les dades necessaries, com les dades per defecte o el directori on es troven tots els fitxers necessaris.
+
+
+### Creació dels certificats i les cadenes de confiança
+
+Fare aquest pas amb la autoritat API. Per la BDD s'ha de fer el mateix amb els fitxers de BDD.
+
+El primer pas és crear noves claus privades i públiques per l'autoritat intermedia API. Com abans creem un parell de claus xifrat amb una clau aes256.
+
+```
+openssl genrsa -aes256 -out API/private/api.key.pem 4096
+Generating RSA private key, 4096 bit long modulus (2 primes)
+.....................................................++++
+................................................................................................................................................................................................................................++++
+e is 65537 (0x010001)
+Enter pass phrase for API/private/api.key.pem:
+Verifying - Enter pass phrase for API/private/api.key.pem:
+
+chmod 400 API/private/api.key.pem
+```
+
+Les contresenyes seran: 
+
+- API: apipatata
+- BDD: bddpatata
+
+
+Ara tocaria generar el certificat a partir de la clau pública de API. Aquest cop però no ho farem com abans ja que torneriem a aconseguir un certificat autosignat, i no tindriem la jerarquia ni la cadena de confiança que voliem.
+
+Per obtenir el certificat aquest cop serà necessari crear un CSR (Cerficate Signing Request). Aquest CSR contindrà la informació del soclicitant (Distinguished Name) juntament amb la clau pública del solicitant. El format que utilitza el CSR és PCKS#10 i el podem veure al __[rfc2986](https://tools.ietf.org/html/rfc2986)__.
+
+
+```
+openssl req -config API/openssl.cnf -new -sha256 -key API/private/api.key.pem -out API/csr/api.csr.pem
+Enter pass phrase for API/private/api.key.pem:
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:ES
+State or Province Name [England]:Catalunya
+Locality Name []:Girona
+Organization Name [Alice Ltd]:SPD-UDG
+Organizational Unit Name []:SPD-API
+Common Name []:SPD Treball CA API
+Email Address []:
+```
+
+Alhora de crear el CSR hem d'anar en compte en possar les mateixes dades que al certificat arrel en aquells camps on hi hagues la opció 'match' a la privacitat.
+
+El common name serveix per distingir univocament la identitat de cada certificat per tant ha de ser diferent al d'abans. Normalment podem posar-hi noms DNS.
+
+El seguent pas serà que l'autoritat arrel signi la petició CSR de API.
+Aquí s'ha d'anar en compte, com que el que signa es l'arrel, hem de posar el fitxer de configuració de l'arrel i no el de API.
+
+```
+openssl ca -config arrel/openssl.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in API/csr/api.csr.pem -out API/certs/api.cert.pem
+
+Using configuration from arrel/openssl.cnf
+Enter pass phrase for /home/francesc/repos/spd-autoritat-certificadora/autoritat/arrel/private/ca.key.pem:
+Can't open /home/francesc/repos/spd-autoritat-certificadora/autoritat/arrel/index.txt.attr for reading, No such file or directory
+139794191585728:error:02001002:system library:fopen:No such file or directory:../crypto/bio/bss_file.c:72:fopen('/home/francesc/repos/spd-autoritat-certificadora/autoritat/arrel/index.txt.attr','r')
+139794191585728:error:2006D080:BIO routines:BIO_new_file:no such file:../crypto/bio/bss_file.c:79:
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 4096 (0x1000)
+        Validity
+            Not Before: Jan  4 14:38:09 2020 GMT
+            Not After : Jan  1 14:38:09 2030 GMT
+        Subject:
+            countryName               = ES
+            stateOrProvinceName       = Catalunya
+            organizationName          = SPD-UDG
+            organizationalUnitName    = SPD-API
+            commonName                = SPD Treball CA API
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                DD:35:35:0E:F1:5D:D0:1F:5A:2A:68:77:24:CC:87:0A:AB:3D:E5:80
+            X509v3 Authority Key Identifier: 
+                keyid:3B:AE:80:4A:E4:39:9F:3A:B1:02:10:78:5F:56:A0:8E:1D:F9:05:60
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE, pathlen:0
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+Certificate is to be certified until Jan  1 14:38:09 2030 GMT (3650 days)
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+```
+Ens demana la clau per utilitzar la clau privada de l'arrel i genera el certificat. Ens demana si el volem signar i finalment veiem com l'afegeix a la base de dades.
+
+En el proces li faltaven alguns fitxers que com no exisiten, els ha creat.
+
+Si ara mirem el fitxer __arrel/index.txt__ veurem que ha creat un 'registre' de tipus 'V' (valid) per el certificat nou que s'ha creat.
+
+```
+cat arrel/index.txt
+
+V	300101143809Z		1000	unknown	/C=ES/ST=Catalunya/O=SPD-UDG/OU=SPD-API/CN=SPD Treball CA API
+```
+
+Per comprovar el certificat podem fer la mateixa comanda d'abans:
+
+```
+openssl x509 -noout -text -in API/certs/api.cert.pem 
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 4096 (0x1000)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = ES, ST = Catalunya, L = Girona, O = SPD-UDG, OU = SPD, CN = SPD Treball CA Arrel
+        Validity
+            Not Before: Jan  4 14:38:09 2020 GMT
+            Not After : Jan  1 14:38:09 2030 GMT
+        Subject: C = ES, ST = Catalunya, O = SPD-UDG, OU = SPD-API, CN = SPD Treball CA API
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (4096 bit)
+                Modulus:
+                    00:ad:33:bd:ca:13:da:f8:97:2e:e2:c1:5b:3f:20:
+                    c2:56:1e:99:3e:4c:34:04:80:47:03:9c:8f:a7:db:
+                    5f:....
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                DD:35:35:0E:F1:5D:D0:1F:5A:2A:68:77:24:CC:87:0A:AB:3D:E5:80
+            X509v3 Authority Key Identifier: 
+                keyid:3B:AE:80:4A:E4:39:9F:3A:B1:02:10:78:5F:56:A0:8E:1D:F9:05:60
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE, pathlen:0
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+    Signature Algorithm: sha256WithRSAEncryption
+         2b:e1:70:80:95:ef:20:d1:6e:79:9e:9b:9a:7c:a0:b7:42:1f:
+         8c:e0:13:b6:04:19:09:a2:e7:83:0b:fa:51:3b:d0:2f:26:0d:
+         1d:....
+
+```
+
+Ara podem veure que el Subject (client del certificat) i el Issuer (Signant del certificat --> CA Arrel) són diferents.
+
+Mitjançant el certificat arrel podem verificar que el nou certificat per l'autoritat intermitja és vàlid.
+
+```
+openssl verify -CAfile arrel/certs/ca.cert.pem API/certs/api.cert.pem 
+
+API/certs/api.cert.pem: OK
+```
+
+Ara el problema que hi ha és que només amb el certificat de API no n'hi ha prou perque, per exemple, els navegadors confiin en el certificat, tot i està signat per una autoritat certificadora superior.
+
+El que s'ha de fer és donar-li el certificat arrel a més del que estem utilitzant a l'aplicació que necessiti verificar el certificats.
+
+Una altre opció es crear una cadena de confiança entre l'autoirat arrel i l'autoritat API. 
+
+```
+cat API/certs/api.cert.pem arrel/certs/ca.cert.pem > API/certs/ca-api-chain.cert.pem
+chmod 444 API/certs/ca-api-chain.cert.pem
+```
+
+Les 2 opcions son vàlides. Si decidim 'instal·lar' el certificat de l'autoritat arrel, el fitxer de cadena només ha de contenir el certificat de l'autoritat API.
+
+### Confiança entre serveis
+
+
+
+\newpage
 
 # Referències
 
