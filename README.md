@@ -1,13 +1,13 @@
-<!-- ---
+---
 title: "SPD - Autoritat Certificadora"
 author: [Francesc Xavier Bullich Parra, GEINF (UDG-EPS)]
-date: 2 de Gener de 2020
+date: 5 de Gener de 2020
 subject: "Udg - Eps"
 tags: [CA]
 subtitle: "Tutor de la pràctica : Antonio Bueno"
 titlepage: true
 
-... -->
+... 
 
 \newpage
 
@@ -373,6 +373,8 @@ Ens demana la clau per utilitzar la clau privada de l'arrel i genera el certific
 
 En el proces li faltaven alguns fitxers que com no exisiten, els ha creat.
 
+\newpage
+
 Si ara mirem el fitxer __arrel/index.txt__ veurem que ha creat un 'registre' de tipus 'V' (valid) per el certificat nou que s'ha creat.
 
 ```
@@ -459,7 +461,9 @@ D'aquesta manera, les aplicacions/servidors API només confiaran en BDD CA, es a
 
 Així doncs quan s'estableixi una connexió entre un aplicació API i una aplicació BDD, totes dues aplicacions veuren que el certificat de l'altre aplicació és valid i de confiança.
 
-#### Exemple de confiança
+\newpage
+
+### Exemple de confiança
 
 En aquest apartat simularé 2 aplicacions, una per cada CA intermitja, amb directoris diferents.
 
@@ -555,8 +559,159 @@ exemple/bdd1/connexio/api1.cert.pem: OK
 
 ## Revocació de certificats
 
+Es possible que, tot i intentar assegurar les claus dels certificats, aquestes siguin compromeses. També pot ser que un certificat ja no sigui útil, per qualsevol motiu. En els dos casos el que s'ha de fer és demanar a l'autoritat (la que ens ha signat el certificat) que revoqui els certificats corresponents.
+
+Quan es fa la validació d'un certificat s'hauria de comprovar que aquest no estigui caducat o que s'hagi revocat abans de la data d'expiració. Si passa algun d'aquests dos casos no hauriem de confiar en el certificat.
+
+Les autoritats de certificació, d'altra banda, han d'oferir algun servei per veure si un certificat ha estat revocat.
+
+OpenSSL permet treballar amb llistes de certificats revocats (CRL) i també amb Online Certificate Status Protocol (OCSP).
+
+### CRL
+
+En el cas de les llistes de revocació cada cop que es revoqui un certificat s'haura de modificar un fitxer que contindrà tots els certificats revocats. Aquest fitxer haurà d'estar exposat en un lloc públic.
+
+Cada autoritat certificadora intermitja haurà de publicar la seva ruta al seu CRL. Caldrà modificar el fitxer de configuració de les autoritats intermitges per tal que tothom que tingui un ceritficat expedit per aquella autoritat sàpiga on anar a buscar la llista CRL.
+
+En l'apartat [server_cert] dels fitxers de configuració hem d'afegir una linia com aquesta:
+
+```
+crlDistributionPoints = URI:http://api.exemple/api.crl.pem
+```
+Per generar el fitxer de cada autoritat:
+
+```
+openssl ca -config autoritat/API/openssl.cnf -gencrl -out autoritat/API/crl/api.crl.pem
+
+openssl ca -config autoritat/BDD/openssl.cnf -gencrl -out autoritat/BDD/crl/bdd.crl.pem
+```
+
+Per revocar utilitzarem el certificat de bdd1 que s'ha utilitzat en l'exemple anterior. Per fer-ho hauriem de passar el certificat a l'autoritat i demanar-li (via RA) que el revoques. Jo ja tinc una copia del certificat a BDD, ho faré directament amb aquesta.
+
+```
+openssl ca -config autoritat/BDD/openssl.cnf -revoke autoritat/BDD/certs/bdd1.cert.pem 
+
+Using configuration from autoritat/BDD/openssl.cnf
+Enter pass phrase for /home/francesc/repos/spd-autoritat-certificadora/autoritat/BDD/private/bdd.key.pem:
+Revoking Certificate 1000.
+Data Base Updated
+
+# Si s'observa el fitxer 'base de dades' index.txt de l'autoritat BDD es pot veure que ara el certificat apareix com a revocat 'R'
+
+cat autoritat/BDD/index.txt
+R	210113162319Z	200105111503Z	1000	unknown	/C=ES/ST=Catalunya/L=Girona/O=SPD-Bdd1/CN=SPD Treball bdd1
+```
+
+Per que els canvis tinguin es vegin reflectits s'ha de tornar a fer la comanda que genera el fitxer de certificats revocats. Després podem veure el contingut del fixter i veurem que, efectivament, s'ha afegit el certificat que s'ha revocat.
+
+```
+openssl ca -config autoritat/BDD/openssl.cnf -gencrl -out autoritat/BDD/crl/bdd.crl.pem
+
+openssl crl -in autoritat/BDD/crl/bdd.crl.pem -noout -text
+
+Certificate Revocation List (CRL):
+        Version 2 (0x1)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C = ES, ST = Catalunya, O = SPD-UDG, OU = SPD-BDD, CN = SPD Treball CA BDD
+        Last Update: Jan  5 11:22:24 2020 GMT
+        Next Update: Feb  4 11:22:24 2020 GMT
+        CRL extensions:
+            X509v3 Authority Key Identifier: 
+                keyid:51:7E:A8:70:8B:9E:BB:2F:10:93:AE:29:03:8E:C5:20:D3:0A:B6:FB
+
+            X509v3 CRL Number: 
+                4097
+Revoked Certificates:
+    Serial Number: 1000
+        Revocation Date: Jan  5 11:15:03 2020 GMT
+    Signature Algorithm: sha256WithRSAEncryption
+         55:f6:87:b2:3a:ec:cf:4e:1e:ed:58:d4:ed:44:2e:b2:53:a7:
+         c7:....
+
+```
+
+### OCSP
+
+OCSP és similar fa una funció similar a CRL. En comptes d'anar a buscar un fitxer de que conté tots els llistats revocats, el que es fa és habilitar una crida web per un certificat en concret.
+
+Molts navegadors utilitzen aquest mètode i ja no fan servir les CRL.
+
+Com abans primer s'ha de modificar el fitxer de configuració de l'autoritat. S'ha de possar la linia que indica on es pot consultar el OCSP. En el meu cas indicaré directament localhost.
+
+```
+[server-cert]
+....
+authorityInfoAccess = OCSP;URI:http://localhost
+```
+
+Per respondre les peticions OCSP necesitarem un certificat. Per tant crearem tant el parell de claus com el certificat signat per l'autoritat intermitja.
+
+```
+openssl genrsa -aes256 -out autoritat/BDD/private/ocsp.bdd.key.pem 4096
+openssl genrsa -aes256 -out autoritat/API/private/ocsp.api.key.pem 4096
+
+openssl req -config autoritat/BDD/openssl.cnf -new -sha256 -key autoritat/BDD/private/ocsp.bdd.key.pem -out autoritat/BDD/csr/ocsp.bdd.csr.pem
+
+openssl ca -config autoritat/BDD/openssl.cnf -extensions ocsp -days 375 -notext -md sha256 -in autoritat/BDD/csr/ocsp.bdd.csr.pem -out autoritat/BDD/certs/ocsp.bdd.cert.pem
+```
+
+Les contrasenyes són:
+
+- API: apio
+- BDD: bddo
 
 
+El OCSP mira directament el fitxer de base de dades index.txt de cada autoritat certificadora. El que es fa és preguntar per un certificat en concret. Si li passem una copia d'un certificat que ha estat revocat en algun moment, ens contestarà que aquell certificat va ser revocat. De fet ens serveix també per verificar si és correcte, OCSP ens indica l'estatus del certificat.
+
+
+Utilitzaré el certificat de bdd1 que ja ha estat revocat en l'apartat CRL.
+
+Primer s'ha de tenir un servei que vagi escoltant les peticions ocsp d'una autoritat en concret. Per veure totes les opcions que hi ha __[Manual OCSP](https://www.openssl.org/docs/man1.1.0/man1/ocsp.html)__.
+
+```
+#S'indica el fitxer index, el port, el certificat per signar del ocsp i el certificat de l'autoritat 
+
+openssl ocsp -index autoritat/BDD/index.txt -port 2560 -rsigner autoritat/BDD/certs/ocsp.bdd.cert.pem -rkey autoritat/BDD/private/ocsp.bdd.key.pem -CA autoritat/BDD/certs/ca-bdd-chain.cert.pem -text -out log.txt 
+
+Enter pass phrase for autoritat/BDD/private/ocsp.bdd.key.pem:
+ocsp: waiting for OCSP client connections...
+```
+
+Des del client que intenta verificar un certificat: 
+(en aquest cas és localhost pero serviria qualsevol url que fos correcte)
+
+```
+# Des dels fitxers exemple mirem el certificat que hem rebut de bdd1 a api1
+
+openssl ocsp -CAfile exemple/api1/certs/ca-bdd-chain.cert.pem -issuer exemple/api1/certs/ca-bdd-chain.cert.pem -cert exemple/api1/connexio/bdd1.cert.pem -url http://127.0.0.1:2560 -resp_text -noverify
+
+```
+
+Aquesta comanda farà la petició http i al final rebrem com a resposta, el certificat del OCSP i la resposta signada per aquest:
+
+```
+OCSP Response Data:
+    OCSP Response Status: successful (0x0)
+    Response Type: Basic OCSP Response
+    Version: 1 (0x0)
+    Responder Id: C = ES, ST = Catalunya, L = Girona, O = SPD-BDD, OU = OCSP-BDD, CN = SPD treball OCSP BDD
+    Produced At: Jan  5 12:12:09 2020 GMT
+    Responses:
+    Certificate ID:
+      Hash Algorithm: sha1
+      Issuer Name Hash: 423837A4CE5A773E1487548465C7C807A5F9E181
+      Issuer Key Hash: 517EA8708B9EBB2F1093AE29038EC520D30AB6FB
+      Serial Number: 1000
+    Cert Status: revoked
+    Revocation Time: Jan  5 11:15:03 2020 GMT
+    This Update: Jan  5 12:12:09 2020 GMT
+
+.....
+-----END CERTIFICATE-----
+exemple/api1/connexio/bdd1.cert.pem: revoked
+	This Update: Jan  5 12:12:09 2020 GMT
+	Revocation Time: Jan  5 11:15:03 2020 GMT
+```
 
 \newpage
 
@@ -567,3 +722,10 @@ exemple/bdd1/connexio/api1.cert.pem: OK
 [2] Crear una CA - [https://jamielinux.com/docs/openssl-certificate-authority/index.html](https://jamielinux.com/docs/openssl-certificate-authority/index.html)
 
 [3] Crear un PKI - [https://blog.cloudflare.com/how-to-build-your-own-public-key-infrastructure/](https://blog.cloudflare.com/how-to-build-your-own-public-key-infrastructure/)
+
+
+```
+generar documentació
+
+pandoc README.md -o README.pdf --from markdown --template eisvogel --listings --toc --latex-engine=xelatex
+```

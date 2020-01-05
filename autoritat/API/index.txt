@@ -1,1 +1,2 @@
 V	210113162006Z		1000	unknown	/C=ES/ST=Catalunya/L=Girona/O=SPD-Api1/CN=SPD Treball api1
+V	210114115731Z		1001	unknown	/C=ES/ST=Catalunya/L=Girona/O=SPD-API/OU=OCSP-API/CN=SPD Treball OCSP API
