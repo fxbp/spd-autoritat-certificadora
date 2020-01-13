@@ -14,14 +14,14 @@ titlepage: true
 
 # Objectiu
 
-L'objectiu del treball és mostrar quins son els elements que composen una autoritat certificadora (CA). També mostraré una forma de crear una autoritat certificadora pròpia, per tal de poder crear certificats de confiança propis.
+L'objectiu del treball és mostrar quins són els elements que componen una autoritat certificadora (CA). També mostraré una forma de crear una autoritat certificadora pròpia, per tal de poder crear certificats de confiança propis.
 
 
 # Introducció
 
-Una autoritat certificadora és una entitat de confiança que és responsable d'emetre i revocar certificats digitals. Aquests certificats s'usen principalment per garantitzar la seguretat de les comunicacions digitals via TLS-HTTPS. S'utilitiza criptograrfia de clau pública per generar les claus i els certificats.
+Una autoritat certificadora és una entitat de confiança que és responsable d'emetre i revocar certificats digitals. Aquests certificats s'usen principalment per garantir la seguretat de les comunicacions digitals via TLS-HTTPS. S'utilitza criptografia de clau pública per generar les claus i els certificats.
 
-La CA dona el servei de certificació, que garantitza la relació entre una persona (física o jurídica) i la seva clau pública (certificat), es a dir, un certificat digital ha de identificar a una persona i s'ha de poder confiar en aquesta relació.
+La CA dona el servei de certificació, que garanteix la relació entre una persona (física o jurídica) i la seva clau pública (certificat), és a dir, un certificat digital ha d'identificar a una persona i s'ha de poder confiar en aquesta relació.
 
 ![Certificat signat CA - Wikipedia](images/cert-wiki.png){height="350px" width="350px"}
 
@@ -32,10 +32,10 @@ Tota la gestió de certificats digitals es fa a través d'un PKI (Public key inf
 
 El PKI es divideix en diversos subsistemes:
 
-- CA: Rep les peticions i crea els certificats. Es responsable d'administrar el cicle de vida dels certificats (temps màxim de validesa o revocació).
-- RA: Autoritat de registre és una interficie entre l'usuari i l'autoritat de certificació. Ha d'identificar el solicitants o titulars dels certificats. 
-- VA: Autoritat de validació emmagztzema els certificats digitals i aministra l allista de certificats caducats o revocats. També posa a disposició tots els certificats emesos per l'autoritat de certificació.
-- Autoritat de custodia: Emmagatzema de forma segura les claus de xifrat que utilitza l'autoritat certificadora.
+- CA: Rep les peticions i crea els certificats. És responsable d'administrar el cicle de vida dels certificats (temps màxim de validesa o revocació).
+- RA: Autoritat de registre és una interfície entre l'usuari i l'autoritat de certificació. Ha d'identificar el sol·licitants o titulars dels certificats.
+- VA: Autoritat de validació emmagatzema els certificats digitals i administra la llista de certificats caducats o revocats. També posa a disposició tots els certificats emesos per l'autoritat de certificació.
+- Autoritat de custòdia: Emmagatzema de forma segura les claus de xifrat que utilitza l'autoritat certificadora.
 
 ![Esquema PKI - Wikipedia](images/pki-wiki.png){height="350px" width="350px"}
 
@@ -43,23 +43,21 @@ El PKI es divideix en diversos subsistemes:
 
 Existeixen 2 tipus de certificats: certificats autosignats o certificats signats per una autoritat certificadora.
 
-Els certificats autosignats es poden crear facilment. Es tracten de certificats els cuals el propietari i el signatari son el mateix. En alguns casos aquets certificats son suficients per determinades accions. Moltes aplicacions pero, sobretot navegadors, no accepten aquest tipus de certificat i exigeixen que el certificat estigui signat per una autoritat certificadora de confiança.
+Els certificats autosignats es poden crear fàcilment. Es tracten de certificats els quals el propietari i el signatari són el mateix. En alguns casos aquests certificats són suficients per determinades accions. Moltes aplicacions però, sobretot navegadors, no accepten aquest tipus de certificat i exigeixen que el certificat estigui signat per una autoritat certificadora de confiança.
 
-Els navegadors confien en una serie de CA, que suposadament, compleixen tots els requeriments per actuar com a CA. Aquesta confiança fa que si es troven un lloc web amb un certificat signat per alguna d'aquestes entitats, validin el certificat i deixa navegar sense problemes. Si trova un certificat autosignat o signat per una CA que no te com a autoritat de confiança, no ens deixerà navegar.
+Els navegadors confien en una sèrie de CA, que suposadament, compleixen tots els requeriments per actuar com a CA. Aquesta confiança fa que si es troben un lloc web amb un certificat signat per alguna d'aquestes entitats, validin el certificat i deixa navegar sense problemes. Si troba un certificat autosignat o signat per una CA que no té com a autoritat de confiança, no ens deixarà navegar.
 
 ![Autoritats confiança firefox](images/ca-firefox.png){height="350px" width="350px"}
 
-Si creem una autoritat de certificació propia, haurem d'incorporar-la a les autoritats de confiança dels nostres dispositius per tal que les reconeguin. 
+Si creem una autoritat de certificació pròpia, haurem d'incorporar-la a les autoritats de confiança dels nostres dispositius per tal que les reconeguin.
 
 ## Jerarquia d'una CA
 
-Com ja s'ha explicat, es necessari que els certificats estiguin signats per una CA. Aquesta CA tindrà els seu propi certificat per tal de poder signar les peticions que rebi.
+Com ja s'ha explicat, és necessari que els certificats estiguin signats per una CA. Aquesta CA tindrà el seu propi certificat per tal de poder signar les peticions que rebi.
 
-Les CA solen treballar en jerarquia: tenen un certificat arrel, que està a sobre de tota la jerarquia. Aquest certificat s'utilitza per crear certificats intermedis que poden servir per diferents proposits. Aixó forma una cadena de confiança 
+Les CA solen treballar en jerarquia: tenen un certificat arrel, que està a sobre de tota la jerarquia. Aquest certificat s'utilitza per crear certificats intermedis que poden servir per diferents propòsits. Això forma una cadena de confiança
 
-El que se sol fer és que el cerfificat arrel només firma els cerfiticats intermedis. Els intermedis s'encarregen de signar peticions dels diferents usuaris de la CA. D'aquesta manera es pot protegir millor el certificat arrel, no cal que tinguem exposat el certificat arrel. Si algun dels certificats  fos compromés, s'hauria de revocar, el que comportaria revocar també tots els certificats emesos. Per tant si utilitzem certificats intermedis és menys probable que es comprometi el certificat arrel. D'aquesta manera no perdriem tota la CA.
-
-Els certificats arrel son autosignats degut a que no tenen cap instancia superior que el pugi signar. Per tant en aquest cas s'ha 'confiar' que el certificat arrel sigui 'correcte'.
+El que se sol fer és que el certificat arrel només firma els certificats intermedis. Els intermedis s'encarreguen de signar peticions dels diferents usuaris de la CA. D'aquesta manera es pot protegir millor el certificat arrel, no cal que tinguem exposat el certificat arrel. Si algun dels certificats fos compromès, s'hauria de revocar, el que comportaria revocar també tots els certificats emesos. Per tant si utilitzem certificats intermedis és menys probable que es comprometi el certificat arrel. D'aquesta manera no perdríem tota la CA.
 
 
 \newpage
@@ -67,30 +65,30 @@ Els certificats arrel son autosignats degut a que no tenen cap instancia superio
 
 # Construcció d'una CA amb OpenSSL
 
-Podem trobar diversos proveidors de certificats a Internet. Molts d'aquests proveidors ja els tenen les aplicacions com a autoritats de confiança. Podriem utilitzar algun d'aquests proveidors per obtenir certificats, però en alguns casos potser és més simple crear els nostres propis certifcats, com per exemple si volem crear un tunel VPN.
+Podem trobar diversos proveïdors de certificats a Internet. Molts d'aquests proveïdors ja els tenen les aplicacions com a autoritats de confiança. Podríem utilitzar algun d'aquests proveïdors per obtenir certificats, però en alguns casos potser és més simple crear els nostres propis certificats, com per exemple si volem crear un túnel VPN.
 
-Utilitzaré OpenSSL per mostrar els passos necessaris per montar la nostra propia autoritat certificadora. En aquest treball em centrarè en l'apartat de la CA dins del PKI. No donarè una interficie RA i farè un VA molt simple utilitzant directoris i fitxers de linux.
+Utilitzaré OpenSSL per mostrar els passos necessaris per muntar la nostra pròpia autoritat certificadora. En aquest treball em centraré en l'apartat de la CA dins del PKI. No donaré una interfície RA i faré un VA molt simple utilitzant directoris i fitxers de Linux.
 
-Per aquesta part seguirè la documentació de [2], que precisament es una guia de com crear una CA. Dels que he trobat és el que està millor i té uns fitxers de configuració molt complets.
+Per aquesta part seguiré la documentació de [2], que precisament és una guia de com crear una CA. Dels que he trobat és el que està millor i té uns fitxers de configuració molt complets.
 
-Tots els fitxers que composaran la CA són al __[directori autoritat]()__. 
+Tots els fitxers que compondran la CA són al __[directori autoritat]()__. 
 
 ## Creació del certificat arrel
 
-Com ja he explicat, per tenir una CA el primer de tot es crear el certificat arrel per poder crear una cadena de confiança. Aquest certificat només el farem servir per signar els certificats intermedis.
+Com ja he explicat, per tenir una CA el primer de tot és crear el certificat arrel per poder crear una cadena de confiança. Aquest certificat només el farem servir per signar els certificats intermedis.
 
-Per seguretat aquest certificat no l'hem d'utilitzar per res més per tant les claus haurien d'estar en un lloc separat de la resta i protegit. En aquest cas però com que és un cas acadèmic, tota la informació relacionada amb el certificat arrel estara en el subdirectori __autoritat/arrel__.
+Per seguretat aquest certificat no l'hem d'utilitzar per res més per tant les claus haurien d'estar en un lloc separat de la resta i protegit. En aquest cas però com que és un cas acadèmic, tota la informació relacionada amb el certificat arrel estarà en el subdirectori __autoritat/arrel__.
 
 
 ### Directoris
 
-Dins de __arrel__ es creen els següents directoris per tal d'ordenar tots els fitxers que s'utilizaran.
+Dins de __arrel__ es creen els següents directoris per tal d'ordenar tots els fitxers que s'utilitzaran.
 
-- private: Aquí hi aniran les claus privades. Com he comentat abans aquestes claus no s'haurien de guardar amb la resta d'informació sino que haurien d'estar separats i protegits.
-- certs: Aquí si guardaràn tots els certificats que signi el certificat arrel
+- private: Aquí hi aniran les claus privades. Com he comentat abans aquestes claus no s'haurien de guardar amb la resta d'informació sinó que haurien d'estar separats i protegits.
+- certs: Aquí si guardaran tots els certificats que signi el certificat arrel
 - crl: Quan es revoqui algun certificat signat per l'arrel es guardarà en aquest directori.
 
-Per posar una mica de protecció el directori private li treurem la resta de permisos
+Per posar una mica de protecció el directori private li traurem la resta de permisos
 
 ```
 mkdir private certs crl
@@ -99,10 +97,10 @@ chmod 700 private
 
 ### Fitxers base de dades
 
-Utilitzarem fitxers a mode de base de dades.
+Utilitzarem fitxers a manera de base de dades.
 
-- index.txt: Aquest fitxer contindrà tots els registres de certificats que es creein. Tindran informació del numero de serie i l'estat (valid, revocat o caducat)
-- serial: Aquest fitxer conté un valor en format hexadecimal que utilitzarà openssl per generar els certificats. Cada certificat tindrà un numero de serie. En aquest fitxer s'hi guarda el valor 'autonumeric', per a cada nou certificat s'incrementa el valor.
+- index.txt: Aquest fitxer contindrà tots els registres de certificats que es creïn. Tindran informació del número de sèrie i l'estat (vàlid, revocat o caducat)
+- serial: Aquest fitxer conté un valor en format hexadecimal que utilitzarà openssl per generar els certificats. Cada certificat tindrà un número de sèrie. En aquest fitxer s'hi guarda el valor 'autonumeric', per a cada nou certificat s'incrementa el valor.
 
 ```
 touch index.txt
@@ -111,15 +109,15 @@ echo 1000 > serial
 
 ### Fitxer de configuració OpenSSL
 
-Al directori __autoritat__ hi ha alguns fitxers plantilla de configuració. Aquests fitxers s'ulitlizaran en les comandes de openssl i indiquen les opcions que ha d'utilitzar openssl per crear els certificats, com per exemple: la ruta dels directoris i fitxers que ha d'utilitzar, les politiques de validació de dades o les dades per defecte per els certificats. 
+Al directori __autoritat__ hi ha alguns fitxers plantilla de configuració. Aquests fitxers s'utilitzaran en les comandes de openssl i indiquen les opcions que ha d'utilitzar openssl per crear els certificats, com per exemple: la ruta dels directoris i fitxers que ha d'utilitzar, les polítiques de validació de dades o les dades per defecte pels certificats.
 
 Si es mira [2] explica per sobre que significa cada apartat.
 
 __Politiques__
 
-Dins del fitxer de configuració podem definir diverses politiques. Aquestes politiques faran un seguit de comprovacions abans de signar un certificat, si no compleixen, no el signaran.
+Dins del fitxer de configuració podem definir diverses polítiques. Aquestes polítiques faran un seguit de comprovacions abans de signar un certificat, si no compleixen, no el signaran.
 
-Per el certificat arrel s'utilitzara la politica estricte:
+Pel certificat arrel s'utilitzarà la política estricte:
 
 ```
 [ policy_strict ]
@@ -133,9 +131,9 @@ commonName              = supplied
 emailAddress            = optional
 ```
 
-Aquestes son les dades 'Distinguished Name' necessaries per poder crear el certificat. Tenim 3 nivells:
+Aquestes són les dades 'Distinguished Name' necessàries per poder crear el certificat. Tenim 3 nivells:
 
-- Match: Si es posa match en un atribut, aquest haurà de coincidir amb el que tingui el certificat arrel (o certificat amb el que es singi). Per exemple si a countryName del certificat arrel tenim 'ES', només s'acceparan peticions que tinguin 'ES'.
+- Match: Si es posa match en un atribut, aquest haurà de coincidir amb el que tingui el certificat arrel (o certificat amb el qual es signi). Per exemple si a countryName del certificat arrel tenim 'ES', només s'acceptaran peticions que tinguin 'ES'.
 
 - supplied: Aquest camp pot tenir qualsevol valor però es requerit. Si la petició no el porta no es podrà signar el certificat.
 
@@ -144,11 +142,11 @@ Aquestes son les dades 'Distinguished Name' necessaries per poder crear el certi
 
 ### Creació de les claus
 
-Fem una copia de la plantilla al directori on tinguem l'arrel de la CA, en el meu cas __autoritat/arrel__, i modifiquem les dades convenients.
+Fem una còpia de la plantilla al directori on tinguem l'arrel de la CA, en el meu cas __autoritat/arrel__, i modifiquem les dades convenients.
 
-Un cop ja tenim tots els fitxers necessaris podem crear les claus privada i publica. 
+Un cop ja tenim tots els fitxers necessaris podem crear les claus privada i publica.
 
-Per l'arrel i els certificats intermedis s'utilitzaran claus de 4096 bits i una contrasenya aes265 que ens demanarà cada cop que volguem signar un certificat nou. De totes maneres podem singar certificats amb claus menors per tant no hi ha problema.
+Per l'arrel i els certificats intermedis s'utilitzaran claus de 4096 bits i una contrasenya aes265 que ens demanarà cada cop que vulguem signar un certificat nou. De totes maneres podem signar certificats amb claus menors per tant no hi ha problema.
 
 ```
 openssl genrsa -aes256 -out private/ca.key.pem 4096
@@ -164,9 +162,9 @@ Verifying - Enter pass phrase for private/ca.key.pem:
 
 ```
 
-Si es vol utilitzar aquesta clau, el password es 'patates'
+Si es vol utilitzar aquesta clau, el password és 'patates'
 
-Finalment només s'ha de crear el certificat a partir de la clau pública. Quan s'utilitza el parametre 'req' de Openssl es important indicar el fitxer de configuració -config, sino s'utilitzara el que te per defecte.
+Finalment només s'ha de crear el certificat a partir de la clau pública. Quan s'utilitza el paràmetre 'req' de Openssl és important indicar el fitxer de configuració -config, sinó s'utilitzarà el que té per defecte.
 
 ```
 openssl req -config openssl.cnf -key private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem
@@ -190,14 +188,14 @@ Email Address []:
 chmod 444 certs/ca.cert.pem
 ```
 
-Aquesta comanda ens demanarà la contrasenya de la clau privada i despres el distinguished name en el format del __[rfc1779](https://tools.ietf.org/html/rfc1779)__.
+Aquesta comanda ens demanarà la contrasenya de la clau privada i després el distinguished name en el format del __[rfc1779](https://tools.ietf.org/html/rfc1779)__.
 
-En aquest cas s'utilitza sha256 com a algoritme de hash per signar els nous certificats pero podem canviar-lo si volem, això dependrà de per quin entorn el volem utilitzar i quins algoritmes son acceptats en els nostres dispositius i aplicacions.
+En aquest cas s'utilitza sha256 com a algoritme de hash per signar els nous certificats però podem canviar-lo si volem, això dependrà de per quin entorn el volem utilitzar i quins algoritmes són acceptats en els nostres dispositius i aplicacions.
 
-Com es pot veure també s'especifica el format del certificat __x509__. Aquest format es estandart internaciona per PKI. Podem veure l'especifiació d'aquest format al __[rfc5280](https://tools.ietf.org/html/rfc5280)__, en concret la versió 3 que és la que utilitzem.
+Com es pot veure també s'especifica el format del certificat __x509__. Aquest format és estàndard internacional per PKI. Podem veure l'especificació d'aquest format al __[rfc5280](https://tools.ietf.org/html/rfc5280)__, en concret la versió 3 que és la que utilitzem.
 
 
-Per comprovar que el certificat es correcte i veuren el contingut:
+Per comprovar que el certificat és correcte i veure'n el contingut:
 
 ```
 openssl x509 -noout -text -in certs/ca.cert.pem 
@@ -236,23 +234,23 @@ Certificate:
          cd:....
 
 ```
-Si ens fixem, el Issuer (El que signa el certificat) i el Subject(Informació del certificat 'client') són el matiex. Com s'ha explicat abans, els certificats arrel son autosignats i contenen la mateixa informació en el Singant i el Client.
 
-Amb aquests passos ja tindriem l'autoritat certificadora arrel. Hauriem de crear autoritats intermedies per tal que els clients no facin peticions directament a l'autoritat arrel. Haurem de crear certificats nous, signats per l'autoritat arrel que ja tenim i crear les cadenes de confiança.
+Si ens fixem, el Issuer (El que signa el certificat) i el Subject (Informació del certificat 'client') són el mateix. Com s'ha explicat abans, els certificats arrel són autosignats i contenen la mateixa informació en el Signant i el Client.
 
+Amb aquests passos ja tindríem l'autoritat certificadora arrel. Hauríem de crear autoritats intermèdies per tal que els clients no facin peticions directament a l'autoritat arrel. Haurem de crear certificats nous, signats per l'autoritat arrel que ja tenim i crear les cadenes de confiança.
 
 ## Autoritats intermedies
 
-En aquest cas seguirem aquest esquema de [3] per crear diverses autoritats intermedies i veure com poden confiar entre elles mitjançant els certificats.
+En aquest cas seguirem aquest esquema de [3] per crear diverses autoritats intermèdies i veure com poden confiar entre elles mitjançant els certificats.
 
 ![Esquema Confiança - CloudFlare](images/service-to-service-cloudflare.png){height="350px" width="350px"}
 
 
 ### Estructura de Directoris
 
-Utilitzarem per a cada autoritat un esquema similar al de l'arrel. En aquest cas peró s'afagira el directori csr on s'hi guardaran els fitxers de petició per crear certificats dels 'clients'.
+Utilitzarem per a cada autoritat un esquema similar al de l'arrel. En aquest cas però s'afegirà el directori csr on s'hi guardaran els fitxers de petició per crear certificats dels 'clients'.
 
-Dins de la carpeta __autoritat__ hi ha les carpetes API i BDD on es crearan les dues autoritats intermedies.
+Dins de la carpeta __autoritat__ hi ha les carpetes API i BDD on es crearan les dues autoritats intermèdies.
 
 ```
 # S'ha de fer el matiex pel directori API i per BDD
@@ -263,7 +261,7 @@ chmod 700 private
 
 ### Fitxers
 
-Com abans també tindrem els fitxers index.txt i serial per la gestió dels certificats que signin les autoritats intermitges. A més crearem un numero de serie per els certificats revocats (en l'autoritat arrel no s'ha fet, pero si haguessim de revocar algun certificat intermig també caldria).
+Com abans també tindrem els fitxers index.txt i serial per la gestió dels certificats que signin les autoritats intermèdies. A més crearem un número de sèrie pels certificats revocats (en l'autoritat arrel no s'ha fet, però si haguéssim de revocar algun certificat intermedi, també caldria).
 
 ```
 # Aquesta part també s'ha de fer als directoris API i BDD
@@ -272,14 +270,14 @@ echo 1000 > serial
 echo 1000 > crlnumber
 ```
 
-També caldrà un fitxer de configuració per les autoritats intermedies. Al directori __autoritat__ hi ha una plantilla per els fitxers intermedis. Només s'ha de copiar i canviar les dades necessaries, com les dades per defecte o el directori on es troven tots els fitxers necessaris.
+També caldrà un fitxer de configuració per les autoritats intermèdies. Al directori __autoritat__ hi ha una plantilla pels fitxers intermedis. Només s'ha de copiar i canviar les dades necessàries, com les dades per defecte o el directori on es troben tots els fitxers necessaris.
 
 
 ### Creació dels certificats i les cadenes de confiança
 
-Fare aquest pas amb la autoritat API. Per la BDD s'ha de fer el mateix amb els fitxers de BDD.
+Faré aquest pas amb l'autoritat API. Per la BDD s'ha de fer el mateix amb els fitxers de BDD.
 
-El primer pas és crear noves claus privades i públiques per l'autoritat intermedia API. Com abans creem un parell de claus xifrat amb una clau aes256.
+El primer pas és crear noves claus privades i públiques per l'autoritat intermèdia API. Com abans creem un parell de claus xifrat amb una clau aes256.
 
 ```
 openssl genrsa -aes256 -out API/private/api.key.pem 4096
@@ -299,9 +297,9 @@ Les contresenyes seran:
 - BDD: bddpatata
 
 
-Ara tocaria generar el certificat a partir de la clau pública de API. Aquest cop però no ho farem com abans ja que torneriem a aconseguir un certificat autosignat, i no tindriem la jerarquia ni la cadena de confiança que voliem.
+Ara tocaria generar el certificat a partir de la clau pública de API. Aquest cop però no ho farem com abans, ja que tornaríem a aconseguir un certificat autosignat, i no tindríem la jerarquia ni la cadena de confiança que volíem.
 
-Per obtenir el certificat aquest cop serà necessari crear un CSR (Cerficate Signing Request). Aquest CSR contindrà la informació del soclicitant (Distinguished Name) juntament amb la clau pública del solicitant. El format que utilitza el CSR és PCKS#10 i el podem veure al __[rfc2986](https://tools.ietf.org/html/rfc2986)__.
+Per obtenir el certificat aquest cop serà necessari crear un CSR (Cerficate Signing Request). Aquest CSR contindrà la informació del sol·licitant (Distinguished Name) juntament amb la clau pública del sol·licitant. El format que utilitza el CSR és PCKS#10 i el podem veure al__[rfc2986](https://tools.ietf.org/html/rfc2986)__.
 
 
 ```
@@ -323,12 +321,12 @@ Common Name []:SPD Treball CA API
 Email Address []:
 ```
 
-Alhora de crear el CSR hem d'anar en compte en possar les mateixes dades que al certificat arrel en aquells camps on hi hagues la opció 'match' a la privacitat.
+A l'hora de crear el CSR hem d'anar amb compte en posar les mateixes dades que al certificat arrel en aquells camps on hi hagués l'opció 'match' a la privacitat.
 
-El common name serveix per distingir univocament la identitat de cada certificat per tant ha de ser diferent al d'abans. Normalment podem posar-hi noms DNS.
+El common name serveix per distingir unívocament la identitat de cada certificat per tant ha de ser diferent del d'abans. Normalment podem posar-hi noms DNS.
 
-El seguent pas serà que l'autoritat arrel signi la petició CSR de API.
-Aquí s'ha d'anar en compte, com que el que signa es l'arrel, hem de posar el fitxer de configuració de l'arrel i no el de API.
+El següent pas serà que l'autoritat arrel signi la petició CSR de API.
+Aquí s'ha d'anar amb compte, com que el que signa és l'arrel, hem de posar el fitxer de configuració de l'arrel i no el de API.
 
 ```
 openssl ca -config arrel/openssl.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in API/csr/api.csr.pem -out API/certs/api.cert.pem
@@ -371,11 +369,11 @@ Data Base Updated
 ```
 Ens demana la clau per utilitzar la clau privada de l'arrel i genera el certificat. Ens demana si el volem signar i finalment veiem com l'afegeix a la base de dades.
 
-En el proces li faltaven alguns fitxers que com no exisiten, els ha creat.
+En el procés li faltaven alguns fitxers que com no existien, els ha creat.
 
 \newpage
 
-Si ara mirem el fitxer __arrel/index.txt__ veurem que ha creat un 'registre' de tipus 'V' (valid) per el certificat nou que s'ha creat.
+Si ara mirem el fitxer __arrel/index.txt__ veurem que ha creat un 'registre' de tipus 'V' (vàlid) pel certificat nou que s'ha creat.
 
 ```
 cat arrel/index.txt
@@ -424,7 +422,7 @@ Certificate:
 
 Ara podem veure que el Subject (client del certificat) i el Issuer (Signant del certificat --> CA Arrel) són diferents.
 
-Mitjançant el certificat arrel podem verificar que el nou certificat per l'autoritat intermitja és vàlid.
+Mitjançant el certificat arrel podem verificar que el nou certificat per l'autoritat intermèdia és vàlid.
 
 ```
 openssl verify -CAfile arrel/certs/ca.cert.pem API/certs/api.cert.pem 
@@ -432,24 +430,24 @@ openssl verify -CAfile arrel/certs/ca.cert.pem API/certs/api.cert.pem
 API/certs/api.cert.pem: OK
 ```
 
-Ara el problema que hi ha és que només amb el certificat de API no n'hi ha prou perque, per exemple, els navegadors confiin en el certificat, tot i està signat per una autoritat certificadora superior.
+Ara el problema que hi ha és que només amb el certificat de API no n'hi ha prou perquè, per exemple, els navegadors confiïn en el certificat, tot i està signat per una autoritat certificadora superior.
 
-El que s'ha de fer és donar-li el certificat arrel a més del que estem utilitzant a l'aplicació que necessiti verificar el certificats.
+El que s'ha de fer és donar-li el certificat arrel a més del que estem utilitzant a l'aplicació que necessiti verificar els certificats.
 
-Una altre opció es crear una cadena de confiança entre l'autoirat arrel i l'autoritat API. 
+Una altra opció és crear una cadena de confiança entre l'autoirat arrel i l'autoritat API.
 
 ```
 cat API/certs/api.cert.pem arrel/certs/ca.cert.pem > API/certs/ca-api-chain.cert.pem
 chmod 444 API/certs/ca-api-chain.cert.pem
 ```
 
-Les 2 opcions son vàlides. Si decidim 'instal·lar' el certificat de l'autoritat arrel, el fitxer de cadena només ha de contenir el certificat de l'autoritat API.
+Les 2 opcions són vàlides. Si decidim 'instal·lar' el certificat de l'autoritat arrel, el fitxer de cadena només ha de contenir el certificat de l'autoritat API.
 
 ### Confiança entre serveis
 
 Seguint l'estructura de la figura 4:
 
-Ara tenim dues autoritats intermitges. Cada una servirà certificats per els seu conjunt de serveis. L'autoritat API servirà certificats les diferents aplicacions que tinguem a la nostre xarxa. L'autoritat BDD servirà els certificats als servidors de bases de dades que tinguem. 
+Ara tenim dues autoritats intermèdies. Cada una servirà certificats per el seu conjunt de serveis. L'autoritat API servirà certificats les diferents aplicacions que tinguem a la nostra xarxa. L'autoritat BDD servirà els certificats als servidors de bases de dades que tinguem.
 
 Que s'ha de fer:
 
@@ -457,21 +455,21 @@ En els servidors/aplicacions que siguin del conjunt de les API (que tinguin cert
 
 D'altra banda en els servidors que siguin del conjunt de BDD (que tinguin certificats signats per BDD CA) s'instal·larà el certificat de API CA.
 
-D'aquesta manera, les aplicacions/servidors API només confiaran en BDD CA, es a dir que només acceptaran certificats que s'hagin estat signats per BDD CA. Amb les aplicacions de BDD pasarà el mateix pero amb la signatura de API CA.
+D'aquesta manera, les aplicacions/servidors API només confiaran en BDD CA, és a dir que només acceptaran certificats que s'hagin estat signats per BDD CA. Amb les aplicacions de BDD passarà el mateix però amb la signatura de API CA.
 
-Així doncs quan s'estableixi una connexió entre un aplicació API i una aplicació BDD, totes dues aplicacions veuren que el certificat de l'altre aplicació és valid i de confiança.
+Així doncs quan s'estableixi una connexió entre una aplicació API i una aplicació BDD, totes dues aplicacions veure'n que el certificat de l'altra aplicació és vàlid i de confiança.
 
 \newpage
 
 ### Exemple de confiança
 
-En aquest apartat simularé 2 aplicacions, una per cada CA intermitja, amb directoris diferents.
+En aquest apartat simularé 2 aplicacions, una per cada CA intermèdia, amb directoris diferents.
 
-Es generarà un certificat per a cada aplicació a partir de les CA intermitges. Posteriorment "s'instal·larà a cada aplicació el certificat de l'autoritat de l'altre part i es verificaran els certificats.
+Es generarà un certificat per a cada aplicació a partir de les CA intermèdies. Posteriorment "s'instal·larà a cada aplicació el certificat de l'autoritat de l'altra part i es verificaran els certificats.
 
 Com abans s'ha de generar un parell de claus, privada i pública, per a cada aplicació.
 
-Al directori __exemple__ hi haurà els direcoris de les aplicacions api1 i bdd1. Cada aplicació tindrà la seva clau privada al subdirectori claus, i els certificats que necessiti al subdirectoris certs.
+Al directori __exemple__ hi haurà els directoris de les aplicacions api1 i bdd1. Cada aplicació tindrà la seva clau privada al subdirectori claus, i els certificats que necessiti al subdirectoris certs.
 
 ```
 openssl genrsa -out api1/clau/api1.key.pem 2048
@@ -491,7 +489,7 @@ e is 65537 (0x010001)
 chmod 400  bdd1/clau/bdd1.key.pem
 ```
 
-Ara per a cada un es creen els CSR amb la Autoritat corresponent i es signen. Ho mostro només per api1, per bdd1 és el mateix amb la seva autoritat.
+Ara per a cada un es creen els CSR amb l'Autoritat corresponent i se signen. Ho mostro només per api1, per bdd1 és el mateix amb la seva autoritat.
 
 ```
 openssl req -config ../autoritat/API/openssl.cnf -key api1/clau/api1.key.pem -new -sha256 -out ../autoritat/API/csr/api1.csr.pem
@@ -517,14 +515,14 @@ openssl ca -config ../autoritat/API/openssl.cnf -extensions server_cert -days 37
 cp ../autoritat/API/certs/api1.cert.pem api1/certs/
 ```
 
-Un cop tenim els certificats de api1 i bdd1 necesitem que les aplicacions confiin en "l'altre" autoritat certificadora. Al directori certs de api1 hi posarem la cadena de confiança de BDD i al directori 'certs' de bdd1 hi posarem la cadena de confiança de API.
+Un cop tenim els certificats de api1 i bdd1 necessitem que les aplicacions confiïn en "l'altre" autoritat certificadora. Al directori certs de api1 hi posarem la cadena de confiança de BDD i al directori 'certs' de bdd1 hi posarem la cadena de confiança de API.
 
 ```
 cp ../autoritat/API/certs/ca-api-chain.cert.pem bdd1/certs/
 cp ../autoritat/BDD/certs/ca-bdd-chain.cert.pem api1/certs/
 ```
 
-Simulem una connexió entre els dos serveis amb un subdirectori c'onnexio' a cada una de les aplicacions. En aquest directori "s'hauran guardat els certificats intercanviats".
+Simulem una connexió entre els dos serveis amb un subdirectori 'connexió' a cada una de les aplicacions. En aquest directori "s'hauran guardat els certificats intercanviats".
 
 ```
 exemple/
@@ -546,7 +544,7 @@ exemple/
             api1.cert.pem
 ```
 
-Ara només ens queda verificar que el certificat és de confiança mitjançant les cadenes de confiança que hem instal·lat a cada aplicació. Obviament només comprovant les signatures no en fem prou peró serveix per ilustrar com s'hauria de fer.
+Ara només ens queda verificar que el certificat és de confiança mitjançant les cadenes de confiança que hem instal·lat a cada aplicació. Òbviament només comprovant les signatures no en fem prou però serveix per il·lustrar com s'hauria de fer.
 
 ```
 openssl verify -CAfile exemple/api1/certs/ca-bdd-chain.cert.pem exemple/api1/connexio/bdd1.cert.pem 
@@ -559,9 +557,9 @@ exemple/bdd1/connexio/api1.cert.pem: OK
 
 ## Revocació de certificats
 
-Es possible que, tot i intentar assegurar les claus dels certificats, aquestes siguin compromeses. També pot ser que un certificat ja no sigui útil, per qualsevol motiu. En els dos casos el que s'ha de fer és demanar a l'autoritat (la que ens ha signat el certificat) que revoqui els certificats corresponents.
+És possible que, tot i intentar assegurar les claus dels certificats, aquestes siguin compromeses. També pot ser que un certificat ja no sigui útil, per qualsevol motiu. En els dos casos el que s'ha de fer és demanar a l'autoritat (la que ens ha signat el certificat) que revoqui els certificats corresponents.
 
-Quan es fa la validació d'un certificat s'hauria de comprovar que aquest no estigui caducat o que s'hagi revocat abans de la data d'expiració. Si passa algun d'aquests dos casos no hauriem de confiar en el certificat.
+Quan es fa la validació d'un certificat s'hauria de comprovar que aquest no estigui caducat o que s'hagi revocat abans de la data d'expiració. Si passa algun d'aquests dos casos no hauríem de confiar en el certificat.
 
 Les autoritats de certificació, d'altra banda, han d'oferir algun servei per veure si un certificat ha estat revocat.
 
@@ -569,11 +567,11 @@ OpenSSL permet treballar amb llistes de certificats revocats (CRL) i també amb 
 
 ### CRL
 
-En el cas de les llistes de revocació cada cop que es revoqui un certificat s'haura de modificar un fitxer que contindrà tots els certificats revocats. Aquest fitxer haurà d'estar exposat en un lloc públic.
+En el cas de les llistes de revocació cada cop que es revoqui un certificat s'haurà de modificar un fitxer que contindrà tots els certificats revocats. Aquest fitxer haurà d'estar exposat en un lloc públic.
 
-Cada autoritat certificadora intermitja haurà de publicar la seva ruta al seu CRL. Caldrà modificar el fitxer de configuració de les autoritats intermitges per tal que tothom que tingui un ceritficat expedit per aquella autoritat sàpiga on anar a buscar la llista CRL.
+Cada autoritat certificadora intermèdia haurà de publicar la seva ruta al seu CRL. Caldrà modificar el fitxer de configuració de les autoritats intermèdies per tal que tothom que tingui un certificat expedit per aquella autoritat sàpiga on anar a buscar la llista CRL.
 
-En l'apartat [server_cert] dels fitxers de configuració hem d'afegir una linia com aquesta:
+En l'apartat [server_cert] dels fitxers de configuració hem d'afegir una línia com aquesta:
 
 ```
 crlDistributionPoints = URI:http://api.exemple/api.crl.pem
@@ -586,7 +584,7 @@ openssl ca -config autoritat/API/openssl.cnf -gencrl -out autoritat/API/crl/api.
 openssl ca -config autoritat/BDD/openssl.cnf -gencrl -out autoritat/BDD/crl/bdd.crl.pem
 ```
 
-Per revocar utilitzarem el certificat de bdd1 que s'ha utilitzat en l'exemple anterior. Per fer-ho hauriem de passar el certificat a l'autoritat i demanar-li (via RA) que el revoques. Jo ja tinc una copia del certificat a BDD, ho faré directament amb aquesta.
+Per revocar utilitzarem el certificat de bdd1 que s'ha utilitzat en l'exemple anterior. Per fer-ho hauríem de passar el certificat a l'autoritat i demanar-li (via RA) que el revoques. Jo ja tinc una còpia del certificat a BDD, ho faré directament amb aquesta.
 
 ```
 openssl ca -config autoritat/BDD/openssl.cnf -revoke autoritat/BDD/certs/bdd1.cert.pem 
@@ -602,7 +600,7 @@ cat autoritat/BDD/index.txt
 R	210113162319Z	200105111503Z	1000	unknown	/C=ES/ST=Catalunya/L=Girona/O=SPD-Bdd1/CN=SPD Treball bdd1
 ```
 
-Per que els canvis tinguin es vegin reflectits s'ha de tornar a fer la comanda que genera el fitxer de certificats revocats. Després podem veure el contingut del fixter i veurem que, efectivament, s'ha afegit el certificat que s'ha revocat.
+Perquè els canvis tinguin es vegin reflectits, s'ha de tornar a fer la comanda que genera el fitxer de certificats revocats. Després podem veure el contingut del fitxer i veurem que, efectivament, s'ha afegit el certificat que s'ha revocat.
 
 ```
 openssl ca -config autoritat/BDD/openssl.cnf -gencrl -out autoritat/BDD/crl/bdd.crl.pem
@@ -632,11 +630,11 @@ Revoked Certificates:
 
 ### OCSP
 
-OCSP és similar fa una funció similar a CRL. En comptes d'anar a buscar un fitxer de que conté tots els llistats revocats, el que es fa és habilitar una crida web per un certificat en concret.
+OCSP fa una funció similar a CRL. En comptes d'anar a buscar un fitxer que conté tots els llistats revocats, el que es fa és habilitar una crida web per un certificat en concret.
 
 Molts navegadors utilitzen aquest mètode i ja no fan servir les CRL.
 
-Com abans primer s'ha de modificar el fitxer de configuració de l'autoritat. S'ha de possar la linia que indica on es pot consultar el OCSP. En el meu cas indicaré directament localhost.
+Com abans primer s'ha de modificar el fitxer de configuració de l'autoritat. S'hi ha de posar la línia que indica on es pot consultar el OCSP. En el meu cas indicaré directament localhost.
 
 ```
 [server-cert]
@@ -644,7 +642,7 @@ Com abans primer s'ha de modificar el fitxer de configuració de l'autoritat. S'
 authorityInfoAccess = OCSP;URI:http://localhost
 ```
 
-Per respondre les peticions OCSP necesitarem un certificat. Per tant crearem tant el parell de claus com el certificat signat per l'autoritat intermitja.
+Per respondre les peticions OCSP necessitarem un certificat. Per tant crearem tant el parell de claus com el certificat signat per l'autoritat intermèdia.
 
 ```
 openssl genrsa -aes256 -out autoritat/BDD/private/ocsp.bdd.key.pem 4096
@@ -661,8 +659,7 @@ Les contrasenyes són:
 - BDD: bddo
 
 
-El OCSP mira directament el fitxer de base de dades index.txt de cada autoritat certificadora. El que es fa és preguntar per un certificat en concret. Si li passem una copia d'un certificat que ha estat revocat en algun moment, ens contestarà que aquell certificat va ser revocat. De fet ens serveix també per verificar si és correcte, OCSP ens indica l'estatus del certificat.
-
+El OCSP mira directament el fitxer de base de dades index.txt de cada autoritat certificadora. El que es fa és preguntar per un certificat en concret. Si li passem una còpia d'un certificat que ha estat revocat en algun moment, ens contestarà que aquell certificat va ser revocat. De fet ens serveix també per verificar si és correcte, OCSP ens indica l'estatus del certificat.
 
 Utilitzaré el certificat de bdd1 que ja ha estat revocat en l'apartat CRL.
 
@@ -677,8 +674,8 @@ Enter pass phrase for autoritat/BDD/private/ocsp.bdd.key.pem:
 ocsp: waiting for OCSP client connections...
 ```
 
-Des del client que intenta verificar un certificat: 
-(en aquest cas és localhost pero serviria qualsevol url que fos correcte)
+Des del client que intenta verificar un certificat:
+(en aquest cas és localhost però serviria qualsevol url que fos correcte)
 
 ```
 # Des dels fitxers exemple mirem el certificat que hem rebut de bdd1 a api1
